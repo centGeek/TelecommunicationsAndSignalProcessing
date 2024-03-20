@@ -1,8 +1,9 @@
-/*#########################################
-Autorzy:2
-Kamil Kowalewski 216806
-Jakub Plich 216866
-#########################################*/
+/*
+Łukasz Centkowski 247638
+
+Maciej Dominiak 247644
+*/
+
 
 #include <windows.h>
 #include <stdio.h>
@@ -127,10 +128,10 @@ void receiving() {
     sendCOM(buf, 1);
 
 
-    FILE *a = fopen("a.txt", "wb"); //OTWIERANIE TRYB WB - TRYB BINARNY ORAZ NADPISYWANIE(KASUJE STARA ZAWARTOSC)
+    FILE *a = fopen(".a.txt", "wb"); //OTWIERANIE TRYB WB - TRYB BINARNY ORAZ NADPISYWANIE(KASUJE STARA ZAWARTOSC)
     while (true) {
         unsigned short sum, sumc;
-        receiveCOM(buf , 3);
+        receiveCOM(buf , 3); //Odebranie nagłówka bloku
         receiveCOM(fileBuffer, 128);
 
         sum = sumc = 0;
@@ -145,7 +146,7 @@ void receiving() {
             sumc %= 256;
         }
 
-        printf("%x %x \n", sum, sumc);
+        //printf("%x %x \n", sum, sumc);
         if (sum != sumc) {
             buf[0] = NAK;
             sendCOM(buf, 1);
@@ -177,7 +178,7 @@ void receiving() {
     std::string file; // Zmienna, do której będziemy zapisywać nazwę pliku odczytaną z pliku tekstowego
 
     // Otwórz strumień wejściowy do odczytu pliku "a.txt"
-    std::ifstream inputFile("a.txt");
+    std::ifstream inputFile(".a.txt");
 
     // Sprawdź, czy plik został otwarty poprawnie
     if (!inputFile.is_open()) {
@@ -245,7 +246,7 @@ void receiving() {
 
 
     // receiveCOM(buf, 1);                 //ODBIERANIE DANYCH
-    printf("%d\n", buf[0]);
+    //printf("%d\n", buf[0]);
     while (true) {
         unsigned short sum, sumc;
         receiveCOM(buf + 1, 2);
@@ -263,7 +264,7 @@ void receiving() {
             sumc %= 256;
         }
 
-        printf("%x %x \n", sum, sumc);
+        //printf("%x %x \n", sum, sumc);
         if (sum != sumc) {
             buf[0] = NAK;
             sendCOM(buf, 1);
@@ -313,7 +314,7 @@ void sending() {
     //initialize(COM);
 
     receiveCOM(buf, 1);
-    printf("%d\n", buf[0]);
+    //printf("%d\n", buf[0]);
     if (buf[0] == NAK) {
         crc = false;
     } else if (buf[0] == C) {
@@ -331,7 +332,7 @@ void sending() {
 
 
     // Otwórz strumień wyjściowy do zapisu do pliku "a.txt"
-    std::ofstream outputFile("a.txt");
+    std::ofstream outputFile(".a.txt");
 
     // Sprawdź, czy plik został otwarty poprawnie
     if (!outputFile.is_open()) {
@@ -344,10 +345,10 @@ void sending() {
     // Zamknij plik
     outputFile.close();
 
-    std::cout << "Zapisano nazwę pliku do pliku a.txt." << std::endl;
+    //std::cout << "Zapisano nazwe pliku do pliku a.txt." << std::endl;
 
 
-    FILE *a = fopen("a.txt", "rb");
+    FILE *a = fopen(".a.txt", "rb");
 
 
     fseek(a, 0, SEEK_END);
@@ -481,7 +482,9 @@ int main() {
     cout << "Lukasz Centkowski 247638\nMaciej Dominiak 247644\n";
 
     int choice;
-    ///////////////// WYBOR TRYBU ////////////////////////
+
+
+
     do {
         cout << "Wybierz tryb pracy:"
                 "\n1. Wysylanie"
@@ -490,11 +493,8 @@ int main() {
         isCorrect(choice);
     } while (!(choice == 1 || choice == 2));
 
-    ////////////// WPISYWANIE NAZWY PLIKU /////////////////
 
-    //file = "coded2.txt";
 
-    ///////// WYBOR PORTU /////////////////////
     int portNumber;
     do {
         cout << "Wybierz port: \n"
@@ -502,6 +502,10 @@ int main() {
                 << "2. COM2\n"
                 << "3. COM3\n"
                 << "4. COM4\n"
+                << "5. COM5\n"
+                << "6. COM6\n"
+                << "7. COM7\n"
+                << "8. COM8\n"
                 << "Wybor: ";
 
         isCorrect(portNumber);
@@ -543,7 +547,9 @@ int main() {
         }
     }
     initialize(COM);
-    //////////////WLACZANIE CRC /////////////////
+
+
+
     int CRCEnable;
     do {
         cout << "Wlaczyc CRC: "
@@ -559,7 +565,6 @@ int main() {
         crc = false;
     }
 
-    ///////////// URUCHAMIANIE DZIALANIA /////////////
     switch (choice) {
         case 1: {
             string a = openFileDialog();
@@ -569,7 +574,7 @@ int main() {
             if (!filePath.empty()) {
                 std::cout << "Wybrany plik: " << filePath << std::endl;
             } else {
-                std::cout << "Nie wybrano żadnego pliku." << std::endl;
+                std::cout << "Nie wybrano zadnego pliku." << std::endl;
             }
             sending();
             break;
