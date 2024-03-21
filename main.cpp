@@ -32,7 +32,10 @@ DCB controlDCB;
 COMMTIMEOUTS objCommtime;
 
 //JESLI BEDZIE NIE DZIALAC TO ODKOMNETOWAC
-int BaudRate = 57600;
+
+
+int parzystosc;
+int BaudRate; //= 57600;
 // int BaudRate = 9600;
 
 bool crc;
@@ -57,7 +60,7 @@ void initialize(char *chosenPort) {
     isReadyPort = GetCommState(handleCom, &controlDCB);
     controlDCB.BaudRate = BaudRate;
     controlDCB.ByteSize = 8;
-    controlDCB.Parity = NOPARITY; //EVENPARITY;
+    controlDCB.Parity = parzystosc;  NOPARITY;EVENPARITY;
     controlDCB.StopBits = ONESTOPBIT;
     controlDCB.fAbortOnError = TRUE;
     controlDCB.fOutX = FALSE; // XON/XOFF WYLACZANIE DO TRANSMISJI
@@ -131,7 +134,7 @@ void receiving() {
     FILE *a = fopen(".a.txt", "wb"); //OTWIERANIE TRYB WB - TRYB BINARNY ORAZ NADPISYWANIE(KASUJE STARA ZAWARTOSC)
     while (true) {
         unsigned short sum, sumc;
-        receiveCOM(buf , 3); //Odebranie nagłówka bloku
+        receiveCOM(buf, 3); //Odebranie nagłówka bloku
         receiveCOM(fileBuffer, 128);
 
         sum = sumc = 0;
@@ -164,14 +167,14 @@ void receiving() {
             }
             fwrite(fileBuffer, 1, last + 1, a);
             fclose(a);
-            buf[0]=ACK;
-            sendCOM(buf,1);
+            buf[0] = ACK;
+            sendCOM(buf, 1);
             break;
         }
         fwrite(fileBuffer, 128, 1, a);
         fclose(a);
-        buf[0]=ACK;
-        sendCOM(buf,1);
+        buf[0] = ACK;
+        sendCOM(buf, 1);
     }
 
 
@@ -207,7 +210,7 @@ void receiving() {
             // Wynik jest dostępny w określonym czasie
             bool result = resultFuture.get();
             if (result) {
-                std::cout << "Sukces!" << std::endl;
+                std::cout << "Rozpoczeto \"pobieranie\"!" << std::endl;
                 break;
             }
         } else if (status == std::future_status::timeout) {
@@ -283,6 +286,7 @@ void receiving() {
             fwrite(fileBuffer, last + 1, 1, f);
             break;
         }
+        cout << "Otrzymano blok nr " << (int) buf[1] << endl;
         fwrite(fileBuffer, 128, 1, f);
     }
     fclose(f);
@@ -290,7 +294,7 @@ void receiving() {
     sendCOM(buf, 1);
 }
 
-const char* getFileName(const char* fullPath) {
+const char *getFileName(const char *fullPath) {
     // Konwersja do std::string dla wygody manipulacji łańcuchami znaków
     std::string path(fullPath);
 
@@ -305,7 +309,6 @@ const char* getFileName(const char* fullPath) {
     // Jeśli nie ma separatorów, zwróć pełną ścieżkę
     return fullPath;
 }
-
 
 
 //FUNKCJA ODPOWIEDZIALNA ZA ODBIERANIE DANYCH - KORZYSTA Z FUNKCJI sendCOM() oraz receivingCOM()
@@ -437,6 +440,7 @@ void sending() {
         buf[1] = no;
         buf[2] = 255 - no;
 
+        cout << "Wysylanie bloku nr " << (int) (unsigned char) no << endl;;
         sendCOM(buf, 3);
         sendCOM(fileBuffer, 128);
         sendCOM((unsigned char *) &sum, crc ? 2 : 1);
@@ -445,6 +449,7 @@ void sending() {
         if (buf[0] == ACK) {
             no++;
         } else {
+            //printf("Retransmisja");
             fseek(f, -128, SEEK_CUR);
         }
     }
@@ -481,10 +486,49 @@ int main() {
     std::string filePath;
     cout << "Lukasz Centkowski 247638\nMaciej Dominiak 247644\n";
 
+
+    int wyb_parz;
+    do {
+        cout << "Wybierz tryb pracy:"
+                "\n1. Przystosc"
+                "\n2. Nieparzystosc"
+                "\nWybor: ";
+        isCorrect(wyb_parz);
+    } while (!(wyb_parz == 1 || wyb_parz == 2));
+
+    if (wyb_parz == 1) {
+        parzystosc = EVENPARITY;
+    } else if (wyb_parz == 2) {
+        parzystosc = NOPARITY;
+    }
+
+    int choice_of_bound_rate;
+    do {
+        cout << "Wybierz szybkosc transmisji: "
+                "\n1. 9600 b/s"
+                "\n2. 19200 b/s"
+                "\n3. 38400 b/s"
+                "\n4. 57600 b/s"
+                "\n5. 460800 b/s"
+                "\nWybor: ";
+        isCorrect(choice_of_bound_rate);
+    } while (!(choice_of_bound_rate == 1 || choice_of_bound_rate == 2 || choice_of_bound_rate == 3 ||
+               choice_of_bound_rate == 4 || choice_of_bound_rate == 5));
+
+    if (choice_of_bound_rate == 1) {
+        BaudRate = 9600;
+    } else if (choice_of_bound_rate == 2) {
+        BaudRate = 19200;
+    } else if (choice_of_bound_rate == 3) {
+        BaudRate = 38400;
+    } else if (choice_of_bound_rate == 4) {
+        BaudRate = 57600;
+    } else if (choice_of_bound_rate == 5) {
+        BaudRate = 460800;
+    }
+
+
     int choice;
-
-
-
     do {
         cout << "Wybierz tryb pracy:"
                 "\n1. Wysylanie"
@@ -492,7 +536,6 @@ int main() {
                 "\nWybor: ";
         isCorrect(choice);
     } while (!(choice == 1 || choice == 2));
-
 
 
     int portNumber;
@@ -549,7 +592,6 @@ int main() {
     initialize(COM);
 
 
-
     int CRCEnable;
     do {
         cout << "Wlaczyc CRC: "
@@ -568,7 +610,7 @@ int main() {
     switch (choice) {
         case 1: {
             string a = openFileDialog();
-            cout<<a;
+            cout << a;
             file = a.c_str();
             filePath = file;
             if (!filePath.empty()) {
