@@ -4,6 +4,9 @@ import soundcard as sc
 import numpy as np
 import soundfile as sf
 from scipy.signal import resample
+import math
+from contextlib import suppress
+
 
 def record_audio(filename, duration):
     sample_rate = 48000
@@ -22,6 +25,7 @@ def record_audio(filename, duration):
 
     return audio_data
 
+
 def play_audio(filename, sample_rate, bit_depth):
     # Load the recorded data from the WAV file
     audio_data, file_sample_rate = sf.read(filename, dtype='float32')
@@ -33,26 +37,32 @@ def play_audio(filename, sample_rate, bit_depth):
 
     # Normalize the audio data to the range of -1.0 to 1.0
     max_val = np.max(np.abs(audio_data))
+
     if max_val > 0:
         audio_data = audio_data / max_val
 
     # Scale the audio data to the desired bit depth
     if bit_depth == 8:
         dtype = np.int8
-        max_int = 2**7 - 1
+        max_int = 2 ** 7 - 1
         audio_data = (audio_data * max_int).astype(dtype)
     elif bit_depth == 16:
         dtype = np.int16
-        max_int = 2**15 - 1
+        max_int = 2 ** 15 - 1
         audio_data = (audio_data * max_int).astype(dtype)
     elif bit_depth == 24:
         dtype = np.int32
-        max_int = 2**23 - 1
+        max_int = 2 ** 23 - 1
         audio_data = (audio_data * max_int).astype(dtype)
     elif bit_depth == 32:
+        clipped_data = np.clip(audio_data, -1, 1)
         dtype = np.int32
-        max_int = 2**31 - 1
-        audio_data = (audio_data * max_int).astype(dtype)
+        max_int = 2 ** 31 - 1
+        with suppress(RuntimeWarning):
+            try:
+                audio_data = (clipped_data * max_int).astype(dtype)
+            except RuntimeWarning:
+                print("pomocy")
     else:
         raise ValueError("Unsupported bit depth")
 
@@ -67,10 +77,25 @@ def play_audio(filename, sample_rate, bit_depth):
     spk.play(audio_data, samplerate=sample_rate)
     print("Finished playing.")
 
+    # Calculate SNR after playback
+    snr_actual = calculate_snr(audio_data)
+    return snr_actual
+
+
 def calculate_theoretical_snr(bit_depth):
     # Calculate theoretical quantization noise SNR
     snr_quant = 6.02 * bit_depth + 1.76
     return snr_quant
+
+
+def calculate_snr(audio_data):
+    rms = np.sqrt(np.mean(audio_data ** 2))
+    if rms == 0:
+        return float('-inf')
+    else:
+        snr = 20 * math.log10(rms / 1)
+        return snr
+
 
 def start_recording():
     filename = filename_entry.get()
@@ -78,10 +103,12 @@ def start_recording():
 
     try:
         audio_data = record_audio(filename, duration)
-        snr_quant = calculate_theoretical_snr(32)  # since we always record in 32-bit
-        messagebox.showinfo("Recording Complete", f"Recording saved to {filename}\nTheoretical Quantization SNR: {snr_quant:.2f} dB")
+        snr_quant = calculate_theoretical_snr(32)  # Theoretical quantization SNR
+        messagebox.showinfo("Recording Complete",
+                            f"Recording saved to {filename}\nTheoretical Quantization SNR: {snr_quant:.2f} dB {calculate_theoretical_snr(audio_data)}")
     except ValueError as e:
         messagebox.showerror("Error", str(e))
+
 
 def start_playing():
     filename = filename_entry.get()
@@ -89,9 +116,16 @@ def start_playing():
     bit_depth = int(play_bit_depth_var.get())
 
     try:
-        play_audio(filename, sample_rate, bit_depth)
+        snr_actual = play_audio(filename, sample_rate, bit_depth)
+        messagebox.showinfo("Playback Complete", f"SNR of the played audio: {snr_actual:.2f} dB")
     except ValueError as e:
-        messagebox.showerror("Error", str(e))
+        print()
+        # messagebox.showerror("Error", str(e))
+
+
+def exit_application():
+    root.destroy()
+
 
 # Create the main window
 root = tk.Tk()
@@ -125,6 +159,9 @@ play_bit_depth_combobox.grid(row=4, column=1, padx=10, pady=5)
 
 play_button = ttk.Button(root, text="Play", command=start_playing)
 play_button.grid(row=5, column=0, columnspan=2, pady=10)
+
+exit_button = ttk.Button(root, text="Exit", command=exit_application)
+exit_button.grid(row=6, column=0, columnspan=2, pady=10)
 
 # Start the GUI event loop
 root.mainloop()
