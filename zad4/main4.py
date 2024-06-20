@@ -66,6 +66,9 @@ def play_audio(filename, sample_rate, bit_depth):
     else:
         raise ValueError("Unsupported bit depth")
 
+    snr_actual = calculate_snr(audio_data)
+
+
     # Normalize audio data back to range [-1, 1]
     audio_data = audio_data.astype('float32') / max_int
 
@@ -78,7 +81,6 @@ def play_audio(filename, sample_rate, bit_depth):
     print("Finished playing.")
 
     # Calculate SNR after playback
-    snr_actual = calculate_snr(audio_data)
     return snr_actual
 
 
@@ -89,7 +91,15 @@ def calculate_theoretical_snr(bit_depth):
 
 
 def calculate_snr(audio_data):
-    rms = np.sqrt(np.mean(audio_data ** 2))
+
+    audio_square = np.zeros(audio_data.shape, dtype=np.int32)
+
+    for i in range(audio_data.shape[0]):
+        for j in range(audio_data.shape[1]):
+            audio_square[i, j] = np.int32(audio_data[i, j]) ** 2
+    sr = np.mean(audio_square)
+    rms = np.sqrt(sr)
+
     if rms == 0:
         return float('-inf')
     else:
@@ -105,7 +115,7 @@ def start_recording():
         audio_data = record_audio(filename, duration)
         snr_quant = calculate_theoretical_snr(32)  # Theoretical quantization SNR
         messagebox.showinfo("Recording Complete",
-                            f"Recording saved to {filename}\nTheoretical Quantization SNR: {snr_quant:.2f} dB {calculate_theoretical_snr(audio_data)}")
+                            f"Recording saved to {filename}\nTheoretical Quantization SNR: {snr_quant:.2f} dB")
     except ValueError as e:
         messagebox.showerror("Error", str(e))
 
@@ -116,20 +126,25 @@ def start_playing():
     bit_depth = int(play_bit_depth_var.get())
 
     try:
+        # Read the original audio data for comparison
+        original_audio, _ = sf.read(filename, dtype='float32')
         snr_actual = play_audio(filename, sample_rate, bit_depth)
         messagebox.showinfo("Playback Complete", f"SNR of the played audio: {snr_actual:.2f} dB")
     except ValueError as e:
-        print()
-        # messagebox.showerror("Error", str(e))
+        messagebox.showerror("Error", str(e))
 
 
 def exit_application():
     root.destroy()
 
 
+# Print names in the console
+print("John Doe")
+print("Jane Smith")
+
 # Create the main window
 root = tk.Tk()
-root.title("Audio Recorder and Player")
+root.title("Audio Recorder and Player - John Doe & Jane Smith")
 
 # Create and place the widgets for recording
 ttk.Label(root, text="Filename:").grid(row=0, column=0, padx=10, pady=5)
