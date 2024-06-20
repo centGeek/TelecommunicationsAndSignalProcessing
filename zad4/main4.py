@@ -7,8 +7,9 @@ from scipy.signal import resample
 import math
 from contextlib import suppress
 
-
+# nagrywanie audio do pliku wave (na podstawie odpowiednich parametrow)
 def record_audio(filename, duration):
+    # maksymalne wartosci jakie osiaga konsumecki sprzet audio
     sample_rate = 48000
     bit_depth = 32
 
@@ -25,7 +26,7 @@ def record_audio(filename, duration):
 
     return audio_data
 
-
+# odtwarzanie dzwieku na podstawie pliku wave z zadanymi parametrami
 def play_audio(filename, sample_rate, bit_depth):
     # Load the recorded data from the WAV file
     audio_data, file_sample_rate = sf.read(filename, dtype='float32')
@@ -83,13 +84,13 @@ def play_audio(filename, sample_rate, bit_depth):
     # Calculate SNR after playback
     return snr_actual
 
-
+# obliczanie maksymalnego mozliwego snr dla danej glebi bitowej
 def calculate_theoretical_snr(bit_depth):
     # Calculate theoretical quantization noise SNR
     snr_quant = 6.02 * bit_depth + 1.76
     return snr_quant
 
-
+# obliczanie snr (stosunku szumu do sygnału)
 def calculate_snr(audio_data):
 
     audio_square = np.zeros(audio_data.shape, dtype=np.int32)
@@ -98,15 +99,18 @@ def calculate_snr(audio_data):
         for j in range(audio_data.shape[1]):
             audio_square[i, j] = np.int32(audio_data[i, j]) ** 2
     sr = np.mean(audio_square)
+    # obliczanie srednia wartosc sygnalu
+    # obliczanie rms
     rms = np.sqrt(sr)
 
     if rms == 0:
         return float('-inf')
     else:
-        snr = 20 * math.log10(rms / 1)
+        # zgodnie ze wzorem
+        snr = 10 * math.log10(rms / 1)
         return snr
 
-
+# rozpoczecie nagrywania do wave (funkcja do przycisku)
 def start_recording():
     filename = filename_entry.get()
     duration = int(duration_entry.get())
@@ -119,7 +123,7 @@ def start_recording():
     except ValueError as e:
         messagebox.showerror("Error", str(e))
 
-
+# rozpoczecie odtwarzania z pliku wave (funkcja do przycisku)
 def start_playing():
     filename = filename_entry.get()
     sample_rate = int(play_sample_rate_scale.get())
@@ -130,6 +134,8 @@ def start_playing():
         original_audio, _ = sf.read(filename, dtype='float32')
         snr_actual = play_audio(filename, sample_rate, bit_depth)
         messagebox.showinfo("Playback Complete", f"SNR of the played audio: {snr_actual:.2f} dB")
+        hipotetyczne = calculate_theoretical_snr(bit_depth)
+        messagebox.showinfo(f"Hipotetyczna wartość {hipotetyczne}")
     except ValueError as e:
         messagebox.showerror("Error", str(e))
 
@@ -139,12 +145,13 @@ def exit_application():
 
 
 # Print names in the console
-print("John Doe")
-print("Jane Smith")
+print("Maciej Dominiak 247644")
+print("Łukasz Centkowski 247638")
 
 # Create the main window
+# tworzenie gui do zadania
 root = tk.Tk()
-root.title("Audio Recorder and Player - John Doe & Jane Smith")
+root.title("Audio Recorder and Player - Maciej Dominiak i Łukasz Centkowski")
 
 # Create and place the widgets for recording
 ttk.Label(root, text="Filename:").grid(row=0, column=0, padx=10, pady=5)
